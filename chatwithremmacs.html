@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔒 chatwithremmacs</title>
+    <title>🔒 groupchat</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
         body{height:100vh;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:#fff;overflow:hidden}
@@ -39,15 +39,19 @@
         .user-item{padding:10px 0;font-size:15px;border-bottom:1px solid #eee;color:#333}
         .user-item:last-child{border-bottom:none}
         .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:10px;background:#25d366;animation:pulse 2s infinite}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        @media(max-width:768px){.users-list{right:15px;top:75px;max-width:90vw}}
+        .kick-btn{margin-left:8px;background:#ff4444;color:#fff;border:none;border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;}
+        .kick-btn:hover{background:#cc0000;}
+        .admin-badge{font-size:11px;background:#ffd700;color:#333;border-radius:6px;padding:2px 6px;margin-left:6px;font-weight:700;}
+        .admin-input{width:100%;padding:14px;margin:8px 0;border:2px solid rgba(255,255,255,0.3);border-radius:16px;font-size:16px;text-align:center;background:rgba(255,255,255,0.1);color:#fff}
+        .admin-input::placeholder{color:rgba(255,255,255,0.5)}
+        .admin-input:focus{border-color:#ffd700;outline:none}
     </style>
 </head>
 <body>
  
 <div class="login-screen" id="loginScreen">
     <div class="login-box">
-        <h1>🔒 chatwithremmacs</h1>
+        <h1>🔒 groupchat</h1>
         <div id="passwordStage">
             <input type="password" class="login-input" id="passwordInput" placeholder="Enter password..." maxlength="30" autocomplete="current-password">
             <button class="login-btn" id="unlockBtn">Unlock Group</button>
@@ -57,6 +61,12 @@
             <input type="text" class="login-input" id="nameInput" placeholder="Your name (A-Z only)" maxlength="12" autocomplete="nickname">
             <div class="name-rule" id="nameRule">✅ Letters only, min 2 chars</div>
             <button class="login-btn" id="joinBtn">Join Chat</button>
+        </div>
+        <div id="adminStage" style="display:none">
+            <div style="color:#ffd700;font-size:15px;margin-bottom:8px;">👑 Admin password required</div>
+            <input type="password" class="admin-input" id="adminInput" placeholder="Enter admin password..." maxlength="30">
+            <button class="login-btn" id="adminBtn" style="background:linear-gradient(45deg,#ffd700,#ff8c00);">Enter as Admin</button>
+            <div class="error" id="adminError"></div>
         </div>
     </div>
 </div>
@@ -100,6 +110,9 @@
     const PASSWORD_HASH = "0a977b393dbfc02ee7a15f9930fd8c63a297520e5707d07e404ad43e859ed6c1";
     const MAX_MEMBERS = 7;
     let username = '';
+    const ADMIN_NAME = "Pranav";
+    const ADMIN_HASH = "89a6e0405f923a9c3e5421ef8d7bb50e8ec34d5c783282d4db12260b053f91cd";
+    let isAdmin = false;
  
     async function sha256(str) {
         const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -134,8 +147,31 @@
         const raw = document.getElementById('nameInput').value.replace(/[^a-zA-Z]/g, '').trim();
         if (raw.length < 2) return;
         username = raw;
+        if (username.toLowerCase() === ADMIN_NAME.toLowerCase()) {
+            document.getElementById('nameStage').style.display = 'none';
+            document.getElementById('adminStage').style.display = 'block';
+            document.getElementById('adminInput').focus();
+            return;
+        }
+        await enterChat();
+    }
+ 
+    async function verifyAdmin() {
+        const val = document.getElementById('adminInput').value;
+        const error = document.getElementById('adminError');
+        const hash = await sha256(val);
+        if (hash !== ADMIN_HASH) {
+            error.textContent = '❌ Wrong admin password.';
+            setTimeout(() => error.textContent = '', 3000);
+            return;
+        }
+        isAdmin = true;
+        await enterChat();
+    }
+ 
+    async function enterChat() {
         const memberRef = db.ref('members/' + username);
-        await memberRef.set({ name: username, joinedAt: Date.now() });
+        await memberRef.set({ name: username, joinedAt: Date.now(), isAdmin });
         memberRef.onDisconnect().remove();
         window.addEventListener('beforeunload', () => memberRef.remove());
         document.getElementById('loginScreen').style.display = 'none';
@@ -148,6 +184,8 @@
         const memberRef = db.ref('members/' + username);
         memberRef.onDisconnect().remove();
         window.addEventListener('beforeunload', () => memberRef.remove());
+ 
+        checkIfKicked();
  
         // Live messages
         db.ref('messages').on('value', snap => {
@@ -170,12 +208,47 @@
             members.forEach(m => {
                 const div = document.createElement('div');
                 div.className = 'user-item';
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.justifyContent = 'space-between';
+                const left = document.createElement('span');
                 const dot = document.createElement('span');
                 dot.className = 'status-dot';
-                div.appendChild(dot);
-                div.appendChild(document.createTextNode(m.name + (m.name === username ? ' (You)' : '')));
+                left.appendChild(dot);
+                left.appendChild(document.createTextNode(m.name + (m.name === username ? ' (You)' : '')));
+                if (m.isAdmin) {
+                    const badge = document.createElement('span');
+                    badge.className = 'admin-badge';
+                    badge.textContent = '👑';
+                    left.appendChild(badge);
+                }
+                div.appendChild(left);
+                if (isAdmin && m.name !== username) {
+                    const kickBtn = document.createElement('button');
+                    kickBtn.className = 'kick-btn';
+                    kickBtn.textContent = 'Kick';
+                    kickBtn.onclick = () => kickUser(m.name);
+                    div.appendChild(kickBtn);
+                }
                 container.appendChild(div);
             });
+        });
+    }
+ 
+    function kickUser(name) {
+        if (confirm('Kick ' + name + ' from the group?')) {
+            db.ref('members/' + name).remove();
+            db.ref('kicked/' + name).set({ kickedAt: Date.now() });
+        }
+    }
+ 
+    function checkIfKicked() {
+        db.ref('kicked/' + username).on('value', snap => {
+            if (snap.exists()) {
+                alert('❌ You have been removed from the group by the admin.');
+                db.ref('members/' + username).remove();
+                window.location.reload();
+            }
         });
     }
  
@@ -209,6 +282,7 @@
  
     document.getElementById('unlockBtn').addEventListener('click', checkPassword);
     document.getElementById('joinBtn').addEventListener('click', joinGroup);
+    document.getElementById('adminBtn').addEventListener('click', verifyAdmin);
     document.getElementById('sendBtn').addEventListener('click', sendMessage);
     document.getElementById('toggleUsersBtn').addEventListener('click', () => {
         document.getElementById('usersList').classList.toggle('show');
@@ -218,6 +292,9 @@
     });
     document.getElementById('nameInput').addEventListener('keypress', e => {
         if (e.key === 'Enter') joinGroup();
+    });
+    document.getElementById('adminInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') verifyAdmin();
     });
     document.getElementById('nameInput').addEventListener('input', function() {
         this.value = this.value.replace(/[^a-zA-Z]/g, '').substring(0, 12);
@@ -236,4 +313,5 @@
 </script>
 </body>
 </html>
+ 
  
