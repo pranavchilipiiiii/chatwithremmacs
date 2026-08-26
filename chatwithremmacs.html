@@ -1,324 +1,435 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔒 groupchat</title>
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-        body{height:100vh;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:#fff;overflow:hidden}
-        .login-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:1000}
-        .login-box{background:rgba(255,255,255,0.1);backdrop-filter:blur(30px);padding:40px;border-radius:24px;text-align:center;max-width:400px;width:90%;border:2px solid rgba(255,255,255,0.2)}
-        .login-box h1{font-size:2rem;margin-bottom:20px;background:linear-gradient(45deg,#00d4ff,#5a67d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .login-input{width:100%;padding:18px;margin:12px 0;border:2px solid rgba(255,255,255,0.3);border-radius:16px;font-size:18px;text-align:center;background:rgba(255,255,255,0.1);color:#fff}
-        .login-input::placeholder{color:rgba(255,255,255,0.5)}
-        .login-input:focus{border-color:#00d4ff;box-shadow:0 0 20px rgba(0,212,255,0.3);outline:none}
-        .login-btn{width:100%;padding:18px;background:linear-gradient(45deg,#00d4ff,#5a67d8);color:#fff;border:none;border-radius:16px;font-size:18px;font-weight:700;cursor:pointer;transition:all 0.3s;margin:10px 0}
-        .login-btn:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(0,212,255,0.4)}
-        .error{color:#ff6b6b;margin:10px 0;font-size:15px;font-weight:500;min-height:24px}
-        .name-rule{color:#aef;font-size:14px;margin:6px 0}
-        .admin-input{width:100%;padding:14px;margin:8px 0;border:2px solid rgba(255,255,255,0.3);border-radius:16px;font-size:16px;text-align:center;background:rgba(255,255,255,0.1);color:#fff}
-        .admin-input::placeholder{color:rgba(255,255,255,0.5)}
-        .admin-input:focus{border-color:#ffd700;outline:none}
-        .app{display:none;flex-direction:column;height:100vh}
-        .chat-header{background:linear-gradient(135deg,#075e54,#128c7e);padding:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
-        .app-logo{font-size:20px;font-weight:800;background:linear-gradient(45deg,#25d366,#dcf8c6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .online-count{font-size:14px;background:rgba(255,255,255,0.2);padding:6px 14px;border-radius:20px}
-        .chat-messages{flex:1;padding:20px;overflow-y:auto;background:#efeae2;display:flex;flex-direction:column;gap:12px}
-        .message{max-width:80%;padding:14px 20px;border-radius:22px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
-        .message.sent{background:linear-gradient(135deg,#dcf8c6,#a8e6cf);align-self:flex-end;border-bottom-right-radius:6px}
-        .message.received{background:#fff;align-self:flex-start;border-bottom-left-radius:6px;color:#000}
-        .message-author{font-size:13px;font-weight:700;color:#075e54;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
-        .message-time{font-size:12px;color:#666;margin-top:8px;text-align:right;opacity:0.8}
-        .input-area{padding:20px;background:#f0f0f0;display:flex;gap:12px;align-items:flex-end;box-shadow:0 -4px 20px rgba(0,0,0,0.1)}
-        .message-input{flex:1;padding:18px 24px;border:none;border-radius:28px;background:#fff;font-size:16px;resize:none;min-height:55px;max-height:130px;outline:none;box-shadow:0 3px 15px rgba(0,0,0,0.1);font-family:inherit}
-        .send-btn{width:56px;height:56px;border:none;border-radius:50%;background:#25d366;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all 0.2s;box-shadow:0 4px 15px rgba(37,211,102,0.4)}
-        .send-btn:hover{background:#128c7e;transform:scale(1.08)}
-        .send-btn:active{transform:scale(0.98)}
-        .send-btn:disabled{background:#aaa;box-shadow:none;cursor:not-allowed;transform:none}
-        .users-list{position:fixed;top:85px;right:25px;background:#fff;padding:25px;border-radius:20px;max-width:280px;box-shadow:0 15px 50px rgba(0,0,0,0.3);display:none;z-index:100}
-        .users-list.show{display:block}
-        .users-title{font-size:16px;font-weight:800;margin-bottom:14px;color:#075e54;text-align:center}
-        .user-item{padding:10px 0;font-size:15px;border-bottom:1px solid #eee;color:#333;display:flex;align-items:center;justify-content:space-between}
-        .user-item:last-child{border-bottom:none}
-        .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:10px;background:#25d366;animation:pulse 2s infinite}
-        .kick-btn{background:#ff4444;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;}
-        .kick-btn:hover{background:#cc0000;}
-        .admin-badge{font-size:11px;background:#ffd700;color:#333;border-radius:6px;padding:2px 6px;margin-left:6px;font-weight:700;}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        @media(max-width:768px){.users-list{right:15px;top:75px;max-width:90vw}}
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Solaris X-450 — Experimental Solar-Assisted Quadcopter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root {
+    --background: 43 33% 94%;
+    --foreground: 207 29% 13%;
+    --border: 207 15% 78%;
+    --input: 207 15% 78%;
+    --ring: 39 93% 54%;
+    --card: 42 30% 97%;
+    --card-foreground: 207 29% 13%;
+    --card-border: 207 15% 82%;
+    --popover: 42 30% 97%;
+    --popover-foreground: 207 29% 13%;
+    --primary: 39 93% 54%;
+    --primary-foreground: 207 29% 13%;
+    --secondary: 192 26% 87%;
+    --secondary-foreground: 207 29% 18%;
+    --muted: 42 20% 89%;
+    --muted-foreground: 207 13% 40%;
+    --accent: 174 40% 35%;
+    --accent-foreground: 42 30% 97%;
+    --destructive: 2 67% 45%;
+    --destructive-foreground: 42 30% 97%;
+    --sidebar: 207 29% 13%;
+    --sidebar-foreground: 42 30% 97%;
+    --sidebar-border: 207 22% 24%;
+    --sidebar-primary: 39 93% 54%;
+    --sidebar-primary-foreground: 207 29% 13%;
+    --sidebar-accent: 207 22% 24%;
+    --sidebar-accent-foreground: 42 30% 97%;
+    --sidebar-ring: 39 93% 54%;
+    --radius: 0.3rem;
+  }
+  .dark {
+    --background: 207 29% 13%;
+    --foreground: 42 30% 97%;
+    --border: 207 22% 24%;
+    --input: 207 22% 24%;
+    --ring: 39 93% 54%;
+    --card: 207 24% 17%;
+    --card-foreground: 42 30% 97%;
+    --card-border: 207 22% 24%;
+    --popover: 207 24% 17%;
+    --popover-foreground: 42 30% 97%;
+    --primary: 39 93% 54%;
+    --primary-foreground: 207 29% 13%;
+    --secondary: 207 22% 24%;
+    --secondary-foreground: 42 30% 97%;
+    --muted: 207 24% 20%;
+    --muted-foreground: 207 12% 71%;
+    --accent: 174 40% 42%;
+    --accent-foreground: 42 30% 97%;
+    --destructive: 2 67% 55%;
+    --destructive-foreground: 207 29% 13%;
+    --sidebar: 207 29% 10%;
+    --sidebar-foreground: 42 30% 97%;
+    --sidebar-border: 207 22% 20%;
+    --sidebar-primary: 39 93% 54%;
+    --sidebar-primary-foreground: 207 29% 13%;
+    --sidebar-accent: 207 22% 20%;
+    --sidebar-accent-foreground: 42 30% 97%;
+    --sidebar-ring: 39 93% 54%;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Space Grotesk', sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); margin: 0; -webkit-font-smoothing: antialiased; }
+  .font-mono { font-family: 'DM Mono', monospace; }
+  ::selection { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+
+  .site-noise::after {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: .035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+  }
+  .grid-paper {
+    background-image: linear-gradient(hsl(207 29% 13% / .055) 1px, transparent 1px), linear-gradient(90deg, hsl(207 29% 13% / .055) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .hero-radial { background: radial-gradient(circle at 72% 17%, hsl(39 93% 54% / .25), transparent 24%), radial-gradient(circle at 85% 80%, hsl(174 40% 35% / .18), transparent 28%); }
+  .hero-shell { background-color: #15232c; color: #f7f2e8; }
+  .hero-shell .hero-copy { color: rgba(247, 242, 232, .76); }
+  .hero-shell .hero-faint { color: rgba(247, 242, 232, .46); }
+  .reveal { animation: reveal .8s cubic-bezier(.2,.75,.25,1) both; }
+  .reveal-delay-1 { animation-delay: .12s; }
+  .reveal-delay-2 { animation-delay: .24s; }
+  @keyframes reveal { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse-line { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+  .pulse-line { animation: pulse-line 2.4s ease-in-out infinite; }
+  [data-accordion-body][hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+</style>
 </head>
-<body>
- 
-<div class="login-screen" id="loginScreen">
-    <div class="login-box">
-        <h1>🔒 groupchat</h1>
-        <div id="passwordStage">
-            <input type="password" class="login-input" id="passwordInput" placeholder="Enter password..." maxlength="30" autocomplete="current-password">
-            <button class="login-btn" id="unlockBtn">Unlock Group</button>
-            <div class="error" id="loginError"></div>
+<body class="site-noise min-h-[100dvh] overflow-x-hidden">
+
+<header class="fixed inset-x-0 top-0 z-40 border-b border-[hsl(var(--border)/.7)] bg-[hsl(var(--background)/.88)] backdrop-blur-md">
+  <div class="mx-auto flex h-[74px] max-w-[1440px] items-center justify-between px-5 md:px-10">
+    <a href="#top" aria-label="Solaris X-450 home">
+      <div class="flex items-center gap-3">
+        <div class="relative flex h-9 w-9 items-center justify-center border border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
+          <i data-lucide="sun" class="h-[19px] w-[19px]" stroke-width="2.2"></i>
+          <span class="absolute -bottom-1 -right-1 h-2 w-2 bg-[hsl(var(--accent))]"></span>
         </div>
-        <div id="nameStage" style="display:none">
-            <input type="text" class="login-input" id="nameInput" placeholder="Your name (A-Z only)" maxlength="12" autocomplete="nickname">
-            <div class="name-rule" id="nameRule">✅ Letters only, min 2 chars</div>
-            <button class="login-btn" id="joinBtn">Join Chat</button>
-            <div class="error" id="nameError"></div>
+        <div class="leading-none">
+          <p class="font-mono text-[10px] tracking-[0.28em] text-[hsl(var(--primary))]">PROJECT</p>
+          <p class="mt-1 text-sm font-bold tracking-[0.18em] text-[hsl(var(--foreground))]">SOLARIS <span class="text-[hsl(var(--muted-foreground))]">X-450</span></p>
         </div>
-        <div id="adminStage" style="display:none">
-            <div style="color:#ffd700;font-size:15px;margin-bottom:8px;">👑 Admin password required</div>
-            <input type="password" class="admin-input" id="adminInput" placeholder="Enter admin password..." maxlength="30">
-            <button class="login-btn" id="adminBtn" style="background:linear-gradient(45deg,#ffd700,#ff8c00);">Enter as Admin</button>
-            <div class="error" id="adminError"></div>
+      </div>
+    </a>
+    <nav class="hidden items-center gap-7 md:flex" aria-label="Primary navigation" id="nav-desktop"></nav>
+    <div class="flex items-center gap-3">
+      <button type="button" id="theme-toggle" class="flex h-8 w-8 items-center justify-center border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]" aria-label="Toggle theme">
+        <i data-lucide="moon" class="h-[15px] w-[15px]"></i>
+      </button>
+      <button type="button" id="mobile-menu-btn" class="border border-[hsl(var(--border))] p-2 md:hidden" aria-expanded="false" aria-label="Open navigation">
+        <i data-lucide="menu" class="h-5 w-5"></i>
+      </button>
+    </div>
+  </div>
+  <nav id="nav-mobile" class="hidden border-t border-[hsl(var(--border))] bg-[hsl(var(--sidebar))] px-5 py-4 md:hidden" aria-label="Mobile navigation"></nav>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero-shell hero-radial relative min-h-[760px] overflow-hidden border-b border-[hsl(var(--border))] bg-[hsl(var(--sidebar))] pt-[74px] text-[hsl(var(--sidebar-foreground))]">
+    <div class="absolute inset-0 opacity-30" style="background-image: linear-gradient(115deg, transparent 0 55%, hsl(39 93% 54% / .12) 55.1%, transparent 55.3%), linear-gradient(25deg, transparent 0 72%, hsl(174 40% 35% / .14) 72.1%, transparent 72.3%);"></div>
+    <div class="relative mx-auto grid min-h-[686px] max-w-[1440px] items-center gap-14 px-5 py-20 md:grid-cols-[1.02fr_.98fr] md:px-10 md:py-24">
+      <div class="reveal max-w-2xl">
+        <div class="mb-9 flex items-center gap-3 font-mono text-[10px] tracking-[.2em] text-[hsl(var(--primary))]">
+          <span class="h-2 w-2 bg-[hsl(var(--primary))]"></span> EXPERIMENTAL FLIGHT SYSTEM / IN DEVELOPMENT
         </div>
-    </div>
-</div>
- 
-<div class="app" id="app">
-    <div class="chat-header">
-        <div style="display:flex;align-items:center;gap:15px">
-            <div class="app-logo">remmacs</div>
-            <span class="online-count" id="onlineCount">...</span>
+        <h1 class="max-w-3xl text-balance text-5xl font-semibold leading-[.94] tracking-[-.06em] sm:text-7xl md:text-[clamp(4.5rem,8.4vw,8.4rem)]">
+          HARVEST<br /><span class="text-[hsl(var(--primary))]">ENERGY.</span><br />ENGINEER<br /><span class="text-[hsl(var(--sidebar-foreground)/.46)]">FLIGHT.</span>
+        </h1>
+        <p class="hero-copy reveal reveal-delay-1 mt-9 max-w-md border-l border-[hsl(var(--primary))] pl-4 text-sm leading-7 md:text-base">SOLARIS X-450 is an experimental solar-assisted electric quadcopter concept. A living systems study in energy, control, fabrication, and flight.</p>
+        <div class="reveal reveal-delay-2 mt-10 flex flex-wrap items-center gap-4">
+          <a href="#mission" class="inline-flex items-center gap-3 bg-[hsl(var(--primary))] px-5 py-3 font-mono text-[10px] font-medium tracking-[.16em] text-[hsl(var(--primary-foreground))] transition-transform hover:-translate-y-0.5">EXPLORE THE SYSTEM <i data-lucide="arrow-down" class="h-[15px] w-[15px]"></i></a>
+          <span class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--sidebar-foreground)/.48)]">FIELD NOTES / 001—X450</span>
         </div>
-        <div id="toggleUsersBtn" style="cursor:pointer;font-size:22px;">👥</div>
+      </div>
+      <div class="reveal reveal-delay-2 relative mx-auto h-[310px] w-full max-w-[610px] md:h-[430px]" aria-label="Abstract quadcopter system illustration">
+        <div class="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-[hsl(var(--primary)/.72)] bg-[hsl(var(--sidebar)/.55)] md:h-64 md:w-64"></div>
+        <div class="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-[hsl(var(--sidebar-foreground)/.24)] md:h-48 md:w-48"></div>
+        <div class="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-[hsl(var(--primary))] shadow-[0_0_0_12px_hsl(var(--primary)/.1)] md:h-20 md:w-20"></div>
+        <div class="absolute left-[7%] top-[9%] flex flex-col items-center gap-2"><div class="h-14 w-14 rounded-full border border-[hsl(var(--sidebar-foreground)/.35)] bg-[hsl(var(--sidebar)/.65)] p-2 md:h-20 md:w-20"><div class="h-full w-full rounded-full border border-dashed border-[hsl(var(--primary)/.6)]"></div></div><span class="font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.45)]">MOTOR / 01</span></div>
+        <div class="absolute right-[7%] top-[9%] flex flex-col items-center gap-2"><div class="h-14 w-14 rounded-full border border-[hsl(var(--sidebar-foreground)/.35)] bg-[hsl(var(--sidebar)/.65)] p-2 md:h-20 md:w-20"><div class="h-full w-full rounded-full border border-dashed border-[hsl(var(--primary)/.6)]"></div></div><span class="font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.45)]">MOTOR / 02</span></div>
+        <div class="absolute left-[7%] bottom-[9%] flex flex-col items-center gap-2"><div class="h-14 w-14 rounded-full border border-[hsl(var(--sidebar-foreground)/.35)] bg-[hsl(var(--sidebar)/.65)] p-2 md:h-20 md:w-20"><div class="h-full w-full rounded-full border border-dashed border-[hsl(var(--primary)/.6)]"></div></div><span class="font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.45)]">MOTOR / 03</span></div>
+        <div class="absolute right-[7%] bottom-[9%] flex flex-col items-center gap-2"><div class="h-14 w-14 rounded-full border border-[hsl(var(--sidebar-foreground)/.35)] bg-[hsl(var(--sidebar)/.65)] p-2 md:h-20 md:w-20"><div class="h-full w-full rounded-full border border-dashed border-[hsl(var(--primary)/.6)]"></div></div><span class="font-mono text-[9px] text-[hsl(var(--sidebar-foreground)/.45)]">MOTOR / 04</span></div>
+        <div class="absolute left-1/2 top-[3%] h-[94%] w-px -translate-x-1/2 rotate-45 bg-[hsl(var(--primary)/.28)]"></div>
+        <div class="absolute left-1/2 top-[3%] h-[94%] w-px -translate-x-1/2 -rotate-45 bg-[hsl(var(--primary)/.28)]"></div>
+        <span class="absolute left-1/2 top-0 -translate-x-1/2 font-mono text-[9px] tracking-[.12em] text-[hsl(var(--primary))]">TOP VIEW / CONCEPT</span>
+        <span class="absolute bottom-0 left-1/2 -translate-x-1/2 font-mono text-[9px] tracking-[.12em] text-[hsl(var(--sidebar-foreground)/.45)]">FRAME / MODULAR / CARBON-FIBER</span>
+      </div>
     </div>
-    <div class="chat-messages" id="messages"></div>
-    <div class="input-area">
-        <textarea class="message-input" id="messageInput" placeholder="Type message... (Enter=Send)" aria-label="Message input"></textarea>
-        <button class="send-btn" id="sendBtn" disabled aria-label="Send message">➤</button>
+    <div class="absolute bottom-5 left-5 right-5 flex justify-between font-mono text-[9px] tracking-[.14em] text-[hsl(var(--sidebar-foreground)/.35)] md:left-10 md:right-10"><span>34° 03′ 08″ N</span><span>OPEN ENGINEERING NOTEBOOK</span><span class="hidden md:inline">118° 14′ 37″ W</span></div>
+  </section>
+
+  <!-- MISSION -->
+  <section id="mission" class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+    <div class="grid gap-14 md:grid-cols-[.7fr_1.3fr] md:gap-24">
+      <div>
+        <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">01</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>MISSION LOG</span></div>
+        <h2 class="max-w-sm text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">A flight system that shows its work.</h2>
+      </div>
+      <div class="max-w-3xl">
+        <p class="text-xl leading-8 text-[hsl(var(--foreground)/.85)] md:text-2xl md:leading-9">Solaris X-450 asks a practical question: what changes when a small electric aircraft can observe, route, and learn from the energy around it?</p>
+        <div class="mt-10 grid gap-8 border-t border-[hsl(var(--border))] pt-8 sm:grid-cols-3">
+          <div><span class="font-mono text-[10px] text-[hsl(var(--primary))]">01</span><h3 class="mt-4 text-lg font-semibold">Observe</h3><p class="mt-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Make energy flow visible from sunlight to thrust.</p></div>
+          <div><span class="font-mono text-[10px] text-[hsl(var(--primary))]">02</span><h3 class="mt-4 text-lg font-semibold">Engineer</h3><p class="mt-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Keep hardware modular enough to revise.</p></div>
+          <div><span class="font-mono text-[10px] text-[hsl(var(--primary))]">03</span><h3 class="mt-4 text-lg font-semibold">Explain</h3><p class="mt-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Document the tradeoffs for a real audience.</p></div>
+        </div>
+      </div>
     </div>
-    <div class="users-list" id="usersList">
-        <div class="users-title">👥 Online Members</div>
-        <div id="usersListContent"></div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture" class="border-y border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.45)]">
+    <div class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+      <div class="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div>
+          <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">02</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>SYSTEM ARCHITECTURE</span></div>
+          <h2 class="max-w-2xl text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">Energy in.<br /><span class="text-[hsl(var(--accent))]">Decisions out.</span></h2>
+        </div>
+        <p class="max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">The power path is the story. It connects environmental input to the control decisions that make flight possible.</p>
+      </div>
+
+      <!-- energy diagram -->
+      <div class="border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] p-4 md:p-6">
+        <div class="mb-5 flex items-center justify-between border-b border-[hsl(var(--border))] pb-4">
+          <div>
+            <p class="font-mono text-[10px] tracking-[.2em] text-[hsl(var(--muted-foreground))]">SYSTEM DIAGRAM / POWER PATH</p>
+            <p class="mt-2 text-sm font-medium">Follow the energy. Select a node to inspect its role.</p>
+          </div>
+          <i data-lucide="activity" class="hidden text-[hsl(var(--primary))] md:block h-5 w-5"></i>
+        </div>
+        <div class="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-2" id="diagram-nodes"></div>
+        <div class="mt-5 flex gap-3 border-l-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.08)] p-4">
+          <i data-lucide="info" class="mt-0.5 shrink-0 text-[hsl(var(--primary))] h-4 w-4"></i>
+          <p class="text-sm leading-relaxed text-[hsl(var(--muted-foreground))]" id="diagram-detail"></p>
+        </div>
+      </div>
+
+      <div class="mt-14 grid gap-5 md:grid-cols-12">
+        <div class="border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 md:col-span-5 md:p-8">
+          <div class="flex items-center justify-between"><i data-lucide="camera" class="text-[hsl(var(--primary))] h-6 w-6"></i><span class="font-mono text-[10px] tracking-[.16em] text-[hsl(var(--muted-foreground))]">PAYLOAD / FRONT</span></div>
+          <h3 class="mt-12 text-2xl font-semibold tracking-[-.03em]">A stabilized view of the work.</h3>
+          <p class="mt-4 text-sm leading-7 text-[hsl(var(--muted-foreground))]">A front-mounted stabilized camera is part of the concept: a way to study orientation, navigation, and the world the aircraft is moving through.</p>
+          <div class="mt-8 flex items-center gap-3 border-t border-[hsl(var(--border))] pt-5 font-mono text-[10px] tracking-[.1em] text-[hsl(var(--accent))]"><i data-lucide="scan-line" class="h-[15px] w-[15px]"></i> STABILIZATION / CONCEPT</div>
+        </div>
+        <div class="border border-[hsl(var(--border))] bg-[hsl(var(--sidebar))] p-6 text-[hsl(var(--sidebar-foreground))] md:col-span-7 md:p-8">
+          <div class="flex items-center justify-between"><i data-lucide="layers" class="text-[hsl(var(--primary))] h-6 w-6"></i><span class="font-mono text-[10px] tracking-[.16em] text-[hsl(var(--sidebar-foreground)/.5)]">MATERIAL STACK / 03</span></div>
+          <h3 class="mt-12 text-2xl font-semibold tracking-[-.03em]">Structure with room to change.</h3>
+          <p class="mt-4 max-w-xl text-sm leading-7 text-[hsl(var(--sidebar-foreground)/.65)]">The carbon-fiber frame is the structural backbone. A PETG enclosure is being explored as a printable, serviceable layer for electronics and environmental protection—with caveats, not assumptions.</p>
+          <div class="mt-10 grid grid-cols-3 gap-3">
+            <div class="border border-[hsl(var(--sidebar-border))] p-3"><i data-lucide="wind" class="text-[hsl(var(--primary))] h-[15px] w-[15px]"></i><p class="mt-5 font-mono text-[9px] tracking-[.1em] text-[hsl(var(--sidebar-foreground)/.45)]">FRAME</p><p class="mt-1 text-[11px] font-semibold">CARBON-FIBER</p></div>
+            <div class="border border-[hsl(var(--sidebar-border))] p-3"><i data-lucide="box" class="text-[hsl(var(--primary))] h-[15px] w-[15px]"></i><p class="mt-5 font-mono text-[9px] tracking-[.1em] text-[hsl(var(--sidebar-foreground)/.45)]">ENCLOSURE</p><p class="mt-1 text-[11px] font-semibold">PETG / PRINTED</p></div>
+            <div class="border border-[hsl(var(--sidebar-border))] p-3"><i data-lucide="wrench" class="text-[hsl(var(--primary))] h-[15px] w-[15px]"></i><p class="mt-5 font-mono text-[9px] tracking-[.1em] text-[hsl(var(--sidebar-foreground)/.45)]">LAYOUT</p><p class="mt-1 text-[11px] font-semibold">MODULAR</p></div>
+          </div>
+        </div>
+      </div>
     </div>
-</div>
- 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
- 
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyAu6voGzST_Qki0GYtYA8pbG6-h3To55xs",
-        authDomain: "chatwithremmacs-9def1.firebaseapp.com",
-        databaseURL: "https://chatwithremmacs-9def1-default-rtdb.firebaseio.com",
-        projectId: "chatwithremmacs-9def1",
-        storageBucket: "chatwithremmacs-9def1.firebasestorage.app",
-        messagingSenderId: "804171795983",
-        appId: "1:804171795983:web:ab6a219f629938798ddd7a"
-    };
- 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
- 
-    const PASSWORD_HASH = "0a977b393dbfc02ee7a15f9930fd8c63a297520e5707d07e404ad43e859ed6c1";
-    const ADMIN_NAME = "Pranav";
-    const ADMIN_HASH = "89a6e0405f923a9c3e5421ef8d7bb50e8ec34d5c783282d4db12260b053f91cd";
-    const MAX_MEMBERS = 7;
-    let username = '';
-    let isAdmin = false;
- 
-    async function sha256(str) {
-        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
-    }
- 
-    function escapeHTML(str) {
-        return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    }
- 
-    async function checkPassword() {
-        const val = document.getElementById('passwordInput').value;
-        const error = document.getElementById('loginError');
-        const hash = await sha256(val);
-        if (hash !== PASSWORD_HASH) {
-            error.textContent = '❌ Incorrect password.';
-            setTimeout(() => error.textContent = '', 3000);
-            return;
-        }
-        document.getElementById('passwordStage').style.display = 'none';
-        document.getElementById('nameStage').style.display = 'block';
-        document.getElementById('nameInput').focus();
-    }
- 
-    async function joinGroup() {
-        const raw = document.getElementById('nameInput').value.replace(/[^a-zA-Z]/g, '').trim();
-        if (raw.length < 2) return;
-        username = raw;
- 
-        // Check if admin
-        if (username.toLowerCase() === ADMIN_NAME.toLowerCase()) {
-            document.getElementById('nameStage').style.display = 'none';
-            document.getElementById('adminStage').style.display = 'block';
-            document.getElementById('adminInput').focus();
-            return;
-        }
- 
-        // Check if name already exists in members (rejoining)
-        const existing = await db.ref('members/' + username).once('value');
-        if (!existing.exists()) {
-            // New member — check limit
-            const snap = await db.ref('members').once('value');
-            const count = snap.exists() ? Object.keys(snap.val()).length : 0;
-            if (count >= MAX_MEMBERS) {
-                document.getElementById('nameError').textContent = '🚫 This group is full (7/7 members).';
-                return;
-            }
-        }
- 
-        // Clear any previous kick record so they can rejoin
-        await db.ref('kicked/' + username).remove();
- 
-        await enterChat(false);
-    }
- 
-    async function verifyAdmin() {
-        const val = document.getElementById('adminInput').value;
-        const error = document.getElementById('adminError');
-        const hash = await sha256(val);
-        if (hash !== ADMIN_HASH) {
-            error.textContent = '❌ Wrong admin password.';
-            setTimeout(() => error.textContent = '', 3000);
-            return;
-        }
-        isAdmin = true;
-        await enterChat(true);
-    }
- 
-    async function enterChat(admin) {
-        const memberRef = db.ref('members/' + username);
-        await memberRef.set({ name: username, joinedAt: Date.now(), isAdmin: admin });
-        memberRef.onDisconnect().remove();
-        window.addEventListener('beforeunload', () => memberRef.remove());
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('app').style.display = 'flex';
-        startChat();
-    }
- 
-    function startChat() {
-        checkIfKicked();
- 
-        // Live messages
-        db.ref('messages').on('value', snap => {
-            const container = document.getElementById('messages');
-            container.innerHTML = '';
-            if (snap.exists()) {
-                Object.values(snap.val())
-                    .sort((a, b) => a.timestamp - b.timestamp)
-                    .forEach(msg => renderMessage(msg));
-            }
-            container.scrollTop = container.scrollHeight;
-        });
- 
-        // Live online members
-        db.ref('members').on('value', snap => {
-            const members = snap.exists() ? Object.values(snap.val()) : [];
-            document.getElementById('onlineCount').textContent = members.length + ' online';
-            const container = document.getElementById('usersListContent');
-            container.innerHTML = '';
-            members.forEach(m => {
-                const div = document.createElement('div');
-                div.className = 'user-item';
-                const left = document.createElement('span');
-                const dot = document.createElement('span');
-                dot.className = 'status-dot';
-                left.appendChild(dot);
-                left.appendChild(document.createTextNode(m.name + (m.name === username ? ' (You)' : '')));
-                if (m.isAdmin) {
-                    const badge = document.createElement('span');
-                    badge.className = 'admin-badge';
-                    badge.textContent = '👑';
-                    left.appendChild(badge);
-                }
-                div.appendChild(left);
-                if (isAdmin && m.name !== username) {
-                    const kickBtn = document.createElement('button');
-                    kickBtn.className = 'kick-btn';
-                    kickBtn.textContent = 'Kick';
-                    kickBtn.onclick = () => kickUser(m.name);
-                    div.appendChild(kickBtn);
-                }
-                container.appendChild(div);
-            });
-        });
-    }
- 
-    function kickUser(name) {
-        if (confirm('Kick ' + name + ' from the group?')) {
-            db.ref('members/' + name).remove();
-            db.ref('kicked/' + name).set({ kickedAt: Date.now() });
-        }
-    }
- 
-    function checkIfKicked() {
-        db.ref('kicked/' + username).on('value', snap => {
-            if (snap.exists()) {
-                alert('❌ You have been removed from the group by the admin.');
-                db.ref('members/' + username).remove();
-                window.location.reload();
-            }
-        });
-    }
- 
-    function sendMessage() {
-        const input = document.getElementById('messageInput');
-        const text = input.value.trim();
-        if (!text) return;
-        db.ref('messages').push({ username, text, timestamp: Date.now() });
-        input.value = '';
-        input.style.height = '55px';
-        document.getElementById('sendBtn').disabled = true;
-    }
- 
-    function renderMessage(data) {
-        const container = document.getElementById('messages');
-        const div = document.createElement('div');
-        div.className = data.username === username ? 'message sent' : 'message received';
-        const author = document.createElement('div');
-        author.className = 'message-author';
-        author.textContent = data.username;
-        const body = document.createElement('span');
-        body.textContent = data.text;
-        const time = document.createElement('div');
-        time.className = 'message-time';
-        time.textContent = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        div.appendChild(author);
-        div.appendChild(body);
-        div.appendChild(time);
-        container.appendChild(div);
-    }
- 
-    document.getElementById('unlockBtn').addEventListener('click', checkPassword);
-    document.getElementById('joinBtn').addEventListener('click', joinGroup);
-    document.getElementById('adminBtn').addEventListener('click', verifyAdmin);
-    document.getElementById('sendBtn').addEventListener('click', sendMessage);
-    document.getElementById('toggleUsersBtn').addEventListener('click', () => {
-        document.getElementById('usersList').classList.toggle('show');
-    });
-    document.getElementById('passwordInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter') checkPassword();
-    });
-    document.getElementById('nameInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter') joinGroup();
-    });
-    document.getElementById('adminInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter') verifyAdmin();
-    });
-    document.getElementById('nameInput').addEventListener('input', function() {
-        this.value = this.value.replace(/[^a-zA-Z]/g, '').substring(0, 12);
-        document.getElementById('nameRule').textContent = this.value.length >= 2
-            ? '✅ "' + escapeHTML(this.value) + '" ready to join!'
-            : '✅ Letters only, min 2 chars';
-    });
-    document.getElementById('messageInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    });
-    document.getElementById('messageInput').addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 130) + 'px';
-        document.getElementById('sendBtn').disabled = this.value.trim().length === 0;
-    });
-</script>
-</body>
-</html>
- 
- 
+  </section>
+
+  <!-- INSTRUMENTATION -->
+  <section class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+    <div class="grid gap-14 md:grid-cols-[.82fr_1.18fr] md:gap-24">
+      <div>
+        <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">03</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>INSTRUMENTATION</span></div>
+        <h2 class="text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">The aircraft is only half the interface.</h2>
+        <p class="mt-7 max-w-md text-sm leading-7 text-[hsl(var(--muted-foreground))]">The ground console is inspired by a handheld game device, but its purpose is engineering: observe state, understand signals, and make informed decisions.</p>
+        <div class="mt-9 inline-flex items-center gap-3 border border-[hsl(var(--border))] px-3 py-2 font-mono text-[10px] tracking-[.12em]"><i data-lucide="terminal" class="text-[hsl(var(--accent))] h-[14px] w-[14px]"></i> GROUND CONSOLE / CONCEPT</div>
+      </div>
+      <div class="relative border border-[hsl(var(--border))] bg-[hsl(var(--sidebar))] p-5 text-[hsl(var(--sidebar-foreground))] md:p-8">
+        <div class="absolute right-5 top-5 flex items-center gap-2 font-mono text-[9px] tracking-[.14em] text-[hsl(var(--primary))]"><span class="h-1.5 w-1.5 bg-[hsl(var(--primary))] pulse-line"></span> LINK STANDBY</div>
+        <div class="mx-auto max-w-[520px] rounded-[2rem] border-4 border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar)/.6)] p-4 shadow-2xl md:p-7">
+          <div class="border border-[hsl(var(--accent)/.7)] bg-[hsl(var(--accent)/.15)] p-4">
+            <div class="mb-5 flex items-center justify-between font-mono text-[8px] tracking-[.14em] text-[hsl(var(--sidebar-foreground)/.6)]"><span>X450 / TELEMETRY VIEW</span><span>SYNC — —</span></div>
+            <div class="grid grid-cols-5 gap-1 border-b border-[hsl(var(--accent)/.4)] pb-5">
+              <div><p class="font-mono text-[8px] text-[hsl(var(--sidebar-foreground)/.5)]">ALT</p><p class="mt-1 font-mono text-sm text-[hsl(var(--sidebar-foreground))]">—</p></div>
+              <div><p class="font-mono text-[8px] text-[hsl(var(--sidebar-foreground)/.5)]">BAT</p><p class="mt-1 font-mono text-sm text-[hsl(var(--sidebar-foreground))]">—</p></div>
+              <div><p class="font-mono text-[8px] text-[hsl(var(--sidebar-foreground)/.5)]">GPS</p><p class="mt-1 font-mono text-sm text-[hsl(var(--sidebar-foreground))]">—</p></div>
+              <div><p class="font-mono text-[8px] text-[hsl(var(--sidebar-foreground)/.5)]">TEMP</p><p class="mt-1 font-mono text-sm text-[hsl(var(--sidebar-foreground))]">—</p></div>
+              <div><p class="font-mono text-[8px] text-[hsl(var(--sidebar-foreground)/.5)]">LINK</p><p class="mt-1 font-mono text-sm text-[hsl(var(--primary))]">— —</p></div>
+            </div>
+            <div class="flex h-24 items-center justify-center"><div class="relative h-14 w-44 border-x border-[hsl(var(--primary)/.6)]"><div class="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 rotate-[-12deg] bg-[hsl(var(--primary))]"></div><div class="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[hsl(var(--primary))]"></div></div></div>
+            <p class="font-mono text-[8px] tracking-[.13em] text-[hsl(var(--sidebar-foreground)/.5)]">NO LIVE DATA / CONCEPT DISPLAY</p>
+          </div>
+          <div class="mt-5 flex items-center justify-between px-2">
+            <div class="grid h-9 w-9 grid-cols-3 gap-1"><span></span><span class="bg-[hsl(var(--primary))]"></span><span></span><span class="bg-[hsl(var(--primary))]"></span><span class="bg-[hsl(var(--primary))]"></span><span class="bg-[hsl(var(--primary))]"></span><span></span><span class="bg-[hsl(var(--primary))]"></span><span></span></div>
+            <div class="flex gap-3"><span class="h-8 w-8 rounded-full border border-[hsl(var(--primary))]"></span><span class="h-8 w-8 rounded-full border border-[hsl(var(--accent))]"></span></div>
+          </div>
+        </div>
+        <div class="mt-6 grid gap-3 sm:grid-cols-3">
+          <div class="border-t border-[hsl(var(--sidebar-border))] pt-3"><i data-lucide="satellite" class="text-[hsl(var(--primary))] h-[15px] w-[15px]"></i><p class="mt-3 text-xs font-semibold">GPS</p><p class="mt-1 font-mono text-[8px] tracking-[.08em] text-[hsl(var(--sidebar-foreground)/.45)]">POSITION / CONTEXT</p></div>
+          <div class="border-t border-[hsl(var(--sidebar-border))] pt-3"><i data-lucide="signal" class="text-[hsl(var(--primary))] h-[15px] w-[15px]"></i><p class="mt-3 text-xs font-semibold">TELEMETRY</p><p class="mt-1 font-mono text-[8px] tracking-[.08em] text-[hsl(var(--sidebar-foreground)/.45)]">STATE / OBSERVE</p></div>
+          <div class="border-t border-[hsl(var(--sidebar-border))] pt-3"><i data-lucide="gauge" class="text-[hsl(var(--primary))] h-[15px] w-[15px]"></i><p class="mt-3 text-xs font-semibold">SENSORS</p><p class="mt-1 font-mono text-[8px] tracking-[.08em] text-[hsl(var(--sidebar-foreground)/.45)]">MEASURE / LOG</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROGRESS -->
+  <section id="progress" class="border-y border-[hsl(var(--border))] bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
+    <div class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+      <div class="grid gap-14 md:grid-cols-[.8fr_1.2fr] md:gap-24">
+        <div>
+          <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">04</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>DEVELOPMENT STATUS</span></div>
+          <h2 class="text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">Progress is a document, not a finish line.</h2>
+          <p class="mt-7 max-w-sm text-sm leading-7 text-[hsl(var(--sidebar-foreground)/.6)]">This project is under development. The status view keeps the questions visible and avoids turning a target into a claim.</p>
+          <div class="mt-10 border-l-2 border-[hsl(var(--primary))] pl-4"><p class="font-mono text-[10px] tracking-[.15em] text-[hsl(var(--primary))]">CURRENT NOTE</p><p class="mt-2 text-sm">Architecture and prototype work are the active focus.</p></div>
+        </div>
+        <div>
+          <div class="mb-7 flex items-center justify-between border-b border-[hsl(var(--sidebar-border))] pb-3"><span class="font-mono text-[10px] tracking-[.16em] text-[hsl(var(--sidebar-foreground)/.5)]">PHASE REGISTER</span><span class="font-mono text-[10px] text-[hsl(var(--primary))]">02 / 04 ACTIVE</span></div>
+          <div class="grid gap-2 sm:grid-cols-4" id="phase-buttons"></div>
+          <div class="mt-4 min-h-[145px] border border-[hsl(var(--sidebar-border))] p-5">
+            <div class="flex items-center justify-between"><p class="font-mono text-[10px] tracking-[.13em] text-[hsl(var(--primary))]" id="phase-detail-label"></p><i data-lucide="check" class="h-[15px] w-[15px]" id="phase-detail-check"></i></div>
+            <p class="mt-5 max-w-xl text-sm leading-6 text-[hsl(var(--sidebar-foreground)/.72)]" id="phase-detail-body"></p>
+          </div>
+          <div class="mt-8">
+            <div class="border-b border-[hsl(var(--border))] py-4"><div class="flex items-end justify-between gap-4"><div><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--muted-foreground))]">SYSTEM DEFINITION</p><p class="mt-1 text-sm font-semibold">Architecture mapped</p></div><span class="font-mono text-xl text-[hsl(var(--accent))]">01</span></div><div class="mt-3 h-1 bg-[hsl(var(--muted))]"><div class="h-full bg-[hsl(var(--primary))]" style="width:68%"></div></div></div>
+            <div class="border-b border-[hsl(var(--border))] py-4"><div class="flex items-end justify-between gap-4"><div><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--muted-foreground))]">FABRICATION</p><p class="mt-1 text-sm font-semibold">Prototype modules forming</p></div><span class="font-mono text-xl text-[hsl(var(--accent))]">02</span></div><div class="mt-3 h-1 bg-[hsl(var(--muted))]"><div class="h-full bg-[hsl(var(--primary))]" style="width:41%"></div></div></div>
+            <div class="py-4"><div class="flex items-end justify-between gap-4"><div><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--muted-foreground))]">FLIGHT VALIDATION</p><p class="mt-1 text-sm font-semibold">Not yet reported</p></div><span class="font-mono text-xl text-[hsl(var(--accent))]">—</span></div><div class="mt-3 h-1 bg-[hsl(var(--muted))]"><div class="h-full bg-[hsl(var(--primary))]" style="width:8%"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY SOLAR -->
+  <section class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+    <div class="grid gap-14 md:grid-cols-[1.08fr_.92fr] md:gap-24">
+      <div>
+        <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">05</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>WHY SOLAR</span></div>
+        <h2 class="max-w-xl text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">Not a promise of free flight. A better question.</h2>
+        <p class="mt-8 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))]">Solar assistance is interesting because it makes the energy budget visible. It invites a student, sponsor, or judge to look at the whole chain—from irradiance to motor behavior—and ask what the data says.</p>
+        <div class="mt-10 grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-3">
+          <div><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">ENERGY</p><p class="mt-2 text-sm leading-6">Make harvesting part of the system design.</p></div>
+          <div><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">MATERIALS</p><p class="mt-2 text-sm leading-6">Prototype with accessible fabrication methods.</p></div>
+          <div><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">LEARNING</p><p class="mt-2 text-sm leading-6">Turn constraints into measurable questions.</p></div>
+        </div>
+      </div>
+      <div class="grid-paper relative min-h-[370px] border border-[hsl(var(--border))] p-6 md:p-8">
+        <div class="absolute right-7 top-7 font-mono text-[9px] tracking-[.15em] text-[hsl(var(--muted-foreground))]">ENERGY BUDGET / OPEN</div>
+        <div class="absolute bottom-8 left-8 right-8">
+          <div class="flex items-end gap-2" id="energy-bars"></div>
+          <div class="mt-3 flex justify-between font-mono text-[8px] tracking-[.1em] text-[hsl(var(--muted-foreground))]"><span>LOW INPUT</span><span>VARIABLE IRRADIANCE</span><span>TIME →</span></div>
+        </div>
+        <div class="absolute left-8 top-8 flex items-center gap-2 font-mono text-[9px] text-[hsl(var(--accent))]"><i data-lucide="circle-dot" class="h-3 w-3"></i> OBSERVATION MODEL / CONCEPT</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPEN QUESTIONS -->
+  <section class="border-y border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.4)]">
+    <div class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+      <div class="grid gap-14 md:grid-cols-[.65fr_1.35fr] md:gap-24">
+        <div><div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">06</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>OPEN QUESTIONS</span></div><h2 class="text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">Where the work gets honest.</h2></div>
+        <div id="challenges-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL SYSTEM VIEW -->
+  <section class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+    <div class="mb-14 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+      <div><div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">07</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>FINAL SYSTEM VIEW</span></div><h2 class="text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">Every module has a reason.</h2></div>
+      <p class="max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">A concept overview for discussion—not a flight-ready specification.</p>
+    </div>
+    <div class="grid gap-3 md:grid-cols-12">
+      <div class="group min-h-[170px] border border-[hsl(var(--border))] p-5 transition-colors hover:border-[hsl(var(--accent))] md:col-span-3"><div class="flex items-start justify-between"><i data-lucide="sun" class="text-[hsl(var(--primary))] h-[19px] w-[19px]"></i><span class="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">01</span></div><div class="mt-14"><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">HARVEST</p><p class="mt-2 text-sm font-semibold">Solar cells / MPPT</p></div></div>
+      <div class="group min-h-[170px] border border-[hsl(var(--border))] p-5 transition-colors hover:border-[hsl(var(--accent))] md:col-span-2"><div class="flex items-start justify-between"><i data-lucide="battery" class="text-[hsl(var(--primary))] h-[19px] w-[19px]"></i><span class="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">02</span></div><div class="mt-14"><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">STORE</p><p class="mt-2 text-sm font-semibold">Battery / power path</p></div></div>
+      <div class="group min-h-[170px] border border-[hsl(var(--border))] p-5 transition-colors hover:border-[hsl(var(--accent))] md:col-span-2"><div class="flex items-start justify-between"><i data-lucide="navigation" class="text-[hsl(var(--primary))] h-[19px] w-[19px]"></i><span class="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">03</span></div><div class="mt-14"><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">ORIENT</p><p class="mt-2 text-sm font-semibold">GPS / flight controller</p></div></div>
+      <div class="group min-h-[170px] border border-[hsl(var(--border))] p-5 transition-colors hover:border-[hsl(var(--accent))] md:col-span-2"><div class="flex items-start justify-between"><i data-lucide="radio" class="text-[hsl(var(--primary))] h-[19px] w-[19px]"></i><span class="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">04</span></div><div class="mt-14"><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">CONNECT</p><p class="mt-2 text-sm font-semibold">Telemetry / command link</p></div></div>
+      <div class="group min-h-[170px] border border-[hsl(var(--border))] p-5 transition-colors hover:border-[hsl(var(--accent))] md:col-span-2"><div class="flex items-start justify-between"><i data-lucide="camera" class="text-[hsl(var(--primary))] h-[19px] w-[19px]"></i><span class="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">05</span></div><div class="mt-14"><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">OBSERVE</p><p class="mt-2 text-sm font-semibold">Stabilized front camera</p></div></div>
+      <div class="group min-h-[170px] border border-[hsl(var(--border))] p-5 transition-colors hover:border-[hsl(var(--accent))] md:col-span-3"><div class="flex items-start justify-between"><i data-lucide="shield-check" class="text-[hsl(var(--primary))] h-[19px] w-[19px]"></i><span class="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">06</span></div><div class="mt-14"><p class="font-mono text-[10px] tracking-[.14em] text-[hsl(var(--accent))]">PROTECT</p><p class="mt-2 text-sm font-semibold">PETG enclosure / caveats</p></div></div>
+    </div>
+    <div class="mt-3 flex flex-col gap-3 border border-[hsl(var(--primary))] bg-[hsl(var(--primary)/.1)] p-5 md:flex-row md:items-center md:justify-between md:p-6"><div class="flex items-start gap-4"><i data-lucide="wrench" class="mt-1 shrink-0 text-[hsl(var(--accent))] h-5 w-5"></i><p class="max-w-2xl text-sm leading-6">Modularity is the through-line: separate the pieces, understand the interface, improve the system without hiding the lesson.</p></div><span class="font-mono text-[10px] tracking-[.16em] text-[hsl(var(--accent))]">X-450 / SYSTEM LOG</span></div>
+  </section>
+
+  <!-- FUNDING -->
+  <section id="funding" class="border-y border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.35)]">
+    <div class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+      <div class="grid gap-14 md:grid-cols-[.72fr_1.28fr] md:gap-24">
+        <div>
+          <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">08</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>SUPPORT THE BUILD</span></div>
+          <h2 class="max-w-md text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">Help bring Solaris X-450 to life.</h2>
+          <p class="mt-7 max-w-sm text-sm leading-7 text-[hsl(var(--muted-foreground))]">Every contribution helps move the project one step closer to a working prototype. Support can help cover materials, electronics, testing, manufacturing, and other development costs.</p>
+        </div>
+        <div>
+          <p class="mb-6 font-mono text-[10px] tracking-[.18em] text-[hsl(var(--accent))]">WHAT YOUR SUPPORT HELPS FUND</p>
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" id="funding-areas"></div>
+        </div>
+      </div>
+
+      <div class="mt-20 grid gap-14 border-t border-[hsl(var(--border))] pt-14 md:grid-cols-[.8fr_1.2fr] md:gap-24">
+        <div>
+          <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">09</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>FUNDING TRANSPARENCY</span></div>
+          <h2 class="max-w-sm text-3xl font-semibold leading-[1.05] tracking-[-.04em] md:text-5xl">Where the money goes.</h2>
+          <p class="mt-6 max-w-sm text-sm leading-7 text-[hsl(var(--muted-foreground))]">Amounts will be added as the build is scoped. No prices or fundraising numbers are being invented here.</p>
+          <div class="mt-8 grid grid-cols-3 gap-3 border-t border-[hsl(var(--border))] pt-5">
+            <div><p class="font-mono text-[9px] tracking-[.12em] text-[hsl(var(--muted-foreground))]">Goal</p><p class="mt-2 text-xl font-semibold">$____</p></div>
+            <div><p class="font-mono text-[9px] tracking-[.12em] text-[hsl(var(--muted-foreground))]">Raised</p><p class="mt-2 text-xl font-semibold">$____</p></div>
+            <div><p class="font-mono text-[9px] tracking-[.12em] text-[hsl(var(--muted-foreground))]">Remaining</p><p class="mt-2 text-xl font-semibold">$____</p></div>
+          </div>
+          <p class="mt-8 font-mono text-[10px] tracking-[.14em] text-[hsl(var(--primary))]">PROJECT FUNDING GOAL / TO BE UPDATED</p>
+        </div>
+        <div><div class="grid gap-x-8 gap-y-4 sm:grid-cols-2" id="budget-items"></div></div>
+      </div>
+
+      <div class="mt-20 border-t border-[hsl(var(--border))] pt-14">
+        <div class="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <div><div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">10</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>PROJECT UPDATES</span></div><h2 class="text-3xl font-semibold tracking-[-.04em] md:text-5xl">Build in public.</h2></div>
+          <p class="max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">Prototype notes, testing observations, construction, and milestones will be posted here.</p>
+        </div>
+        <div class="mt-8 grid gap-3 md:grid-cols-3">
+          <div class="border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5"><span class="font-mono text-[10px] text-[hsl(var(--primary))]">01 / NOTE</span><h3 class="mt-10 text-lg font-semibold">Project Update #1</h3><p class="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Updates about the prototype, testing, construction, and milestones will be posted here.</p></div>
+          <div class="border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5"><span class="font-mono text-[10px] text-[hsl(var(--primary))]">02 / NOTE</span><h3 class="mt-10 text-lg font-semibold">Project Update #2</h3><p class="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Updates about the prototype, testing, construction, and milestones will be posted here.</p></div>
+          <div class="border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5"><span class="font-mono text-[10px] text-[hsl(var(--primary))]">03 / NOTE</span><h3 class="mt-10 text-lg font-semibold">Project Update #3</h3><p class="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Updates about the prototype, testing, construction, and milestones will be posted here.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPECS -->
+  <section id="specs" class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+    <div class="mb-14 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+      <div>
+        <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">11</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>SPECIFICATION SHEET</span></div>
+        <h2 class="max-w-2xl text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">What's fixed. What's still open.</h2>
+      </div>
+      <p class="max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">A working spec sheet, not a datasheet. Entries marked TBD are real gaps, not omissions.</p>
+    </div>
+    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3" id="spec-groups"></div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="border-y border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.4)]">
+    <div class="mx-auto max-w-[1440px] px-5 py-24 md:px-10 md:py-32">
+      <div class="grid gap-14 md:grid-cols-[.65fr_1.35fr] md:gap-24">
+        <div><div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[0.22em] text-[hsl(var(--accent))]"><span class="text-[hsl(var(--primary))]">12</span><span class="h-px w-8 bg-[hsl(var(--primary))]"></span><span>QUESTIONS</span></div><h2 class="text-4xl font-semibold leading-[1.02] tracking-[-.045em] md:text-6xl">Straight answers, no overclaiming.</h2></div>
+        <div id="faq-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUPPORT CTA -->
+  <section id="support" class="relative overflow-hidden bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
+    <div class="absolute -right-28 -top-28 h-80 w-80 rounded-full border-[40px] border-[hsl(var(--primary-foreground)/.1)]"></div>
+    <div class="relative mx-auto grid max-w-[1440px] gap-14 px-5 py-24 md:grid-cols-[1.2fr_.8fr] md:px-10 md:py-32">
+      <div>
+        <div class="mb-5 flex items-center gap-3 font-mono text-[10px] tracking-[.2em] text-[hsl(var(--primary-foreground)/.65)]"><span class="h-px w-8 bg-[hsl(var(--primary-foreground))]"></span> SUPPORT THE PROJECT</div>
+        <h2 class="max-w-3xl text-5xl font-semibold leading-[.95] tracking-[-.06em] md:text-8xl">Help keep<br />the work<br /><span class="text-[hsl(var(--primary-foreground)/.45)]">moving.</span></h2>
+        <p class="mt-9 max-w-lg text-base leading-7 text-[hsl(var(--primary-foreground)/.75)]">Solaris X-450 is being developed as an educational engineering project. Support will help make the build, the questions, and the results easier to share.</p>
+        <button type="button" id="support-btn" class="mt-9 inline-flex items-center gap-3 border border-[hsl(var(--primary-foreground)/.55)] bg-[hsl(var(--primary-foreground)/.12)] px-5 py-3 font-mono text-[10px] tracking-[.15em] transition-colors hover:bg-[hsl(var(--primary-foreground)/.2)]">I WANT TO SUPPORT THE PROJECT <i data-lucide="arrow-right" class="h-[15px] w-[15px]"></i></button>
+        <p id="support-note" class="mt-4 hidden items-center gap-2 font-mono text-[10px] tracking-[.1em]"><i data-lucide="check" class="h-[14px] w-[14px]"></i> THANK YOU — SUPPORT DETAILS ARE BEING PREPARED.</p>
+      </div>
+      <div class="flex items-center justify-center md:justify-end">
+        <div class="w-full max-w-[320px] border border-[hsl(var(--primary-foreground)/.45)] bg-[hsl(var(--primary-foreground)/.08)] p-5">
+          <div class="flex items-center justify-between border-b border-[hsl(var(--primary-foreground)/.25)] pb-4"><span class="font-mono text-[10px] tracking-[.16em]">SUPPORT CHANNEL</span><i data-lucide="external-link" class="h-[15px] w-[15px]"></i></div>
+          <div class="mx-auto my-8 grid aspect-square max-w-[190px] place-items-center border-2 border-dashed border-[hsl(var(--primary-foreground)/.6)] bg-[hsl(var(--primary-foreground)/.08)] p-5 text-center">
+            <div>
+              <p class="font-mono text-xs font-medium tracking-[.14em]">QR CODE</p>
+              <p class="mt-2 text-[10px] text-[hsl(var(--primary-foreground)/.65)]">Coming Soon</p>
+              <div
